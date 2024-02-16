@@ -1,16 +1,16 @@
-package connectorname_test
+package azure-event-hub_test
 
 import (
 	"context"
 	"testing"
 
-	connectorname "github.com/conduitio/conduit-connector-connectorname"
+	azure-event-hub "github.com/mer-oscar/conduit-connector-azure-event-hub"
 	"github.com/matryer/is"
 )
 
 func TestTeardownSource_NoOpen(t *testing.T) {
 	is := is.New(t)
-	con := connectorname.NewSource()
+	con := azure-event-hub.NewSource()
 	err := con.Teardown(context.Background())
 	is.NoErr(err)
 }

@@ -1,4 +1,4 @@
-package connectorname
+package azure-event-hub
 
 //go:generate paramgen -output=paramgen_src.go SourceConfig
 

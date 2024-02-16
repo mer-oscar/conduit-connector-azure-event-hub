@@ -1,4 +1,4 @@
-module github.com/conduitio/conduit-connector-connectorname
+module github.com/mer-oscar/conduit-connector-azure-event-hub
 
 go 1.21
 
