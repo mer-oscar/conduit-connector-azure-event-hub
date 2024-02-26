@@ -1,4 +1,4 @@
-package azure-event-hub
+package azure_event_hub
 
 import (
 	sdk "github.com/conduitio/conduit-connector-sdk"

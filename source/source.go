@@ -1,6 +1,4 @@
-package azure-event-hub
-
-//go:generate paramgen -output=paramgen_src.go SourceConfig
+package source
 
 import (
 	"context"
@@ -12,15 +10,7 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config           SourceConfig
-	lastPositionRead sdk.Position //nolint:unused // this is just an example
-}
-
-type SourceConfig struct {
-	// Config includes parameters that are the same in the source and destination.
-	Config
-	// SourceConfigParam is named foo and must be provided by the user.
-	SourceConfigParam string `json:"foo" validate:"required"`
+	config Config
 }
 
 func NewSource() sdk.Source {
@@ -31,7 +21,7 @@ func NewSource() sdk.Source {
 func (s *Source) Parameters() map[string]sdk.Parameter {
 	// Parameters is a map of named Parameters that describe how to configure
 	// the Source. Parameters can be generated from SourceConfig with paramgen.
-	return s.config.Parameters()
+	return Config{}.Parameters()
 }
 
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {

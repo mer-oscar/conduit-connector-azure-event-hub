@@ -1,6 +1,4 @@
-package azure-event-hub
-
-//go:generate paramgen -output=paramgen_dest.go DestinationConfig
+package destination
 
 import (
 	"context"
@@ -31,7 +29,7 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 	// Parameters is a map of named Parameters that describe how to configure
 	// the Destination. Parameters can be generated from DestinationConfig with
 	// paramgen.
-	return d.config.Parameters()
+	return Config{}.Parameters()
 }
 
 func (d *Destination) Configure(ctx context.Context, cfg map[string]string) error {
