@@ -8,5 +8,46 @@ import (
 )
 
 func (Config) Parameters() map[string]sdk.Parameter {
-	return map[string]sdk.Parameter{}
+	return map[string]sdk.Parameter{
+		"azure.clientId": {
+			Default:     "",
+			Description: "",
+			Type:        sdk.ParameterTypeString,
+			Validations: []sdk.Validation{
+				sdk.ValidationRequired{},
+			},
+		},
+		"azure.clientSecret": {
+			Default:     "",
+			Description: "",
+			Type:        sdk.ParameterTypeString,
+			Validations: []sdk.Validation{
+				sdk.ValidationRequired{},
+			},
+		},
+		"azure.tenantId": {
+			Default:     "",
+			Description: "",
+			Type:        sdk.ParameterTypeString,
+			Validations: []sdk.Validation{
+				sdk.ValidationRequired{},
+			},
+		},
+		"eventHubName": {
+			Default:     "",
+			Description: "",
+			Type:        sdk.ParameterTypeString,
+			Validations: []sdk.Validation{
+				sdk.ValidationRequired{},
+			},
+		},
+		"eventHubNamespace": {
+			Default:     "",
+			Description: "",
+			Type:        sdk.ParameterTypeString,
+			Validations: []sdk.Validation{
+				sdk.ValidationRequired{},
+			},
+		},
+	}
 }

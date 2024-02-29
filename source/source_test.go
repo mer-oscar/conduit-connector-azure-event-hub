@@ -9,7 +9,7 @@ import (
 
 func TestTeardownSource_NoOpen(t *testing.T) {
 	is := is.New(t)
-	con := NewSource()
+	con := New()
 	err := con.Teardown(context.Background())
 	is.NoErr(err)
 }
