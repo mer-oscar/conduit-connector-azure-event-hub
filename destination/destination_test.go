@@ -9,7 +9,7 @@ import (
 
 func TestTeardown_NoOpen(t *testing.T) {
 	is := is.New(t)
-	con := NewDestination()
+	con := New()
 	err := con.Teardown(context.Background())
 	is.NoErr(err)
 }
