@@ -11,7 +11,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 	return map[string]sdk.Parameter{
 		"azure.clientId": {
 			Default:     "",
-			Description: "",
+			Description: "azure.clientId is your azure client ID",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
@@ -19,7 +19,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 		},
 		"azure.clientSecret": {
 			Default:     "",
-			Description: "",
+			Description: "azure.clientSecret is your azure client secret",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
@@ -27,15 +27,21 @@ func (Config) Parameters() map[string]sdk.Parameter {
 		},
 		"azure.tenantId": {
 			Default:     "",
-			Description: "",
+			Description: "azure.tenantId is the azure tenant ID",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
 			},
 		},
+		"batchSamePartition": {
+			Default:     "false",
+			Description: "batchSamePartition is a boolean that controls whether to write batches of records to the same partition or to divide them among available partitions according to the azure event hubs producer client",
+			Type:        sdk.ParameterTypeBool,
+			Validations: []sdk.Validation{},
+		},
 		"eventHubName": {
 			Default:     "",
-			Description: "",
+			Description: "eventHubName is your event hub name",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
@@ -43,7 +49,7 @@ func (Config) Parameters() map[string]sdk.Parameter {
 		},
 		"eventHubNamespace": {
 			Default:     "",
-			Description: "",
+			Description: "eventHubNamespace is your FQNS",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},

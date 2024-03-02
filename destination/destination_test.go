@@ -13,3 +13,13 @@ func TestTeardown_NoOpen(t *testing.T) {
 	err := con.Teardown(context.Background())
 	is.NoErr(err)
 }
+
+// func TestSendSingleEvent(t *testing.T) {
+// 	is := is.New(t)
+// 	con := New()
+
+// }
+
+// func loadLocalEnv() {
+
+// }

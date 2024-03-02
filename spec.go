@@ -12,9 +12,9 @@ var version = "(devel)"
 func Specification() sdk.Specification {
 	return sdk.Specification{
 		Name:        "azure-event-hub",
-		Summary:     "<describe your connector>",
-		Description: "<describe your connector in detail>",
+		Summary:     "Azure Event Hub Summary",
+		Description: "Azure Event Hub Description",
 		Version:     version,
-		Author:      "<your name>",
+		Author:      "Oscar Villavicencio",
 	}
 }

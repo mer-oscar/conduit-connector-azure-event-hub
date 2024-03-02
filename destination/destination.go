@@ -74,7 +74,6 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 			Body:        records[i].Bytes(),
 			ContentType: to.Ptr[string]("application/json"),
 		}, nil)
-
 		if err != nil {
 			if errors.Is(err, azeventhubs.ErrEventDataTooLarge) {
 				if batch.NumEvents() == 0 {
@@ -82,8 +81,6 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 					sdk.Logger(ctx).Error().Msgf("record with key %s is too large to be sent, wasn't written", records[i].Key.Bytes())
 					return written, err
 				}
-
-				i--
 
 				// batch is full, send and add the current event to the next batch by decrementing the iterator
 				if err := d.client.SendEventDataBatch(ctx, batch, nil); err != nil {
@@ -100,6 +97,7 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 				}
 
 				batch = tmpBatch
+				i--
 			} else {
 				return written, err
 			}

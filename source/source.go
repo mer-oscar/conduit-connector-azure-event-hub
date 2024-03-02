@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs"
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -19,12 +20,14 @@ type Source struct {
 	processor                 *azeventhubs.Processor
 	partitionReadErrorChannel chan error
 	readBuffer                chan sdk.Record
+	partitionClients          []*azeventhubs.PartitionClient
+	dispatched                bool
 }
 
 func New() sdk.Source {
 	return sdk.SourceWithMiddleware(&Source{
 		partitionReadErrorChannel: make(chan error, 1),
-		readBuffer:                make(chan sdk.Record, 1),
+		readBuffer:                make(chan sdk.Record, 10000),
 	}, sdk.DefaultSourceMiddleware()...)
 }
 
@@ -52,21 +55,46 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 		return err
 	}
 
-	s.processor, err = azeventhubs.NewProcessor(s.client, newCheckpointStore(), nil)
+	ehProps, err := s.client.GetEventHubProperties(ctx, nil)
 	if err != nil {
 		return err
 	}
 
+	for _, partitionID := range ehProps.PartitionIDs {
+		partitionClient, err := s.client.NewPartitionClient(partitionID, &azeventhubs.PartitionClientOptions{
+			StartPosition: azeventhubs.StartPosition{
+				Earliest: to.Ptr[bool](true),
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		s.partitionClients = append(s.partitionClients, partitionClient)
+	}
+
+	// go func() {
+	// 	s.dispatchPartitionClients(ctx)
+
+	// 	err := <-s.partitionReadErrorChannel
+	// 	if err != nil {
+	// 		sdk.Logger(ctx).Err(err)
+	// 	}
+	// }()
 	return nil
 }
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
-	// dispatch the processors, when they read in a new record, push it to our read buffer
-	go s.dispatchPartitionClients(ctx)
+	if !s.dispatched {
+		go s.dispatchPartitionClients(ctx)
+	}
 
 	select {
 	case err := <-s.partitionReadErrorChannel:
-		return sdk.Record{}, err
+		if err != nil {
+			return sdk.Record{}, err
+		}
+		return sdk.Record{}, ctx.Err()
 	case rec := <-s.readBuffer:
 		return rec, nil
 	case <-ctx.Done():
@@ -80,66 +108,66 @@ func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
 
 func (s *Source) Teardown(ctx context.Context) error {
 	if s.client != nil {
-		s.client.Close(ctx)
+		err := s.client.Close(ctx)
+		if err != nil {
+			return err
+		}
 	}
+
+	for _, client := range s.partitionClients {
+		client.Close(ctx)
+	}
+
 	return nil
 }
 
 func (s *Source) dispatchPartitionClients(ctx context.Context) {
-	for {
-		processorPartitionClient := s.processor.NextPartitionClient(ctx)
+	s.dispatched = true
 
-		if processorPartitionClient == nil {
-			// Processor has stopped
-			break
-		}
-
+	for _, client := range s.partitionClients {
+		client := client
 		go func() {
-			defer func() {
-				// 3/3 [END] Do cleanup here, like shutting down database clients
-				// or other resources used for processing this partition.
-				processorPartitionClient.Close(ctx)
-			}()
+			// Wait up to a 500ms for 100 events, otherwise returns whatever we collected during that time.
+			receiveCtx, cancelReceive := context.WithTimeout(ctx, time.Second*1)
+			events, err := client.ReceiveEvents(receiveCtx, 1000, nil)
+			defer cancelReceive()
 
-			for {
-				// Wait up to a minute for 100 events, otherwise returns whatever we collected during that time.
-				receiveCtx, cancelReceive := context.WithTimeout(context.TODO(), time.Minute)
-				events, err := processorPartitionClient.ReceiveEvents(receiveCtx, 100, nil)
-				cancelReceive()
+			if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+				fmt.Println(err)
+				s.partitionReadErrorChannel <- err
+				return
+			}
 
-				if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-					var eventHubError *azeventhubs.Error
+			if len(events) == 0 {
+				return
+			}
 
-					if errors.As(err, &eventHubError) && eventHubError.Code == azeventhubs.ErrorCodeOwnershipLost {
-						return
-					}
-
-					s.partitionReadErrorChannel <- err
-					return
+			for _, event := range events {
+				position := fmt.Sprintf("%d", event.SequenceNumber)
+				if event.PartitionKey != nil {
+					position = fmt.Sprintf("%s-%d", *event.PartitionKey, event.SequenceNumber)
 				}
 
-				if len(events) == 0 {
-					continue
-				}
+				rec := sdk.Util.Source.NewRecordCreate(
+					sdk.Position(position),
+					nil,
+					sdk.RawData(*event.MessageID),
+					sdk.RawData(event.Body))
 
-				for _, event := range events {
-					// create record per event
-					rec := sdk.Util.Source.NewRecordCreate(
-						nil,
-						nil,
-						sdk.RawData(*event.MessageID),
-						sdk.RawData(event.Body))
-
-					s.readBuffer <- rec
-				}
-
-				// Updates the checkpoint with the latest event received. If processing needs to restart
-				// it will restart from this point, automatically.
-				if err := processorPartitionClient.UpdateCheckpoint(ctx, events[len(events)-1], nil); err != nil {
-					s.partitionReadErrorChannel <- err
-					return
-				}
+				s.readBuffer <- rec
 			}
 		}()
 	}
+
+	select {
+	case err := <-s.partitionReadErrorChannel:
+		if err != nil {
+			// log error and close out
+			return
+		}
+	case <-ctx.Done():
+		s.dispatched = false
+		return
+	}
+
 }
